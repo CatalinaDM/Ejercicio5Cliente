@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -245,13 +246,14 @@ public class GestorController {
 		return mav;
 	}
 	@PostMapping("/saveComentario")
-	public String setSaveComentario(@RequestBody Comentarios comentarios) {
+	@ResponseBody
+	public Integer setSaveComentario(@RequestBody Comentarios comentarios) {
 		
 		RestTemplate template = new RestTemplate();
 		String urlservicebd = "http://localhost:8081/addComentario";
 		ResponseEntity<Integer> response = template.postForEntity(urlservicebd, comentarios, Integer.class); 
 		
-		return "proyecto";
+		return response.getBody();
 	}
 	
 	

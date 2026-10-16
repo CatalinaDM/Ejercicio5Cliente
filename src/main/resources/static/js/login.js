@@ -44,8 +44,13 @@ function validarLogin(){
 					localStorage.setItem("usuario", JSON.stringify(data));
 					window.location.href = 'inicio';
 				}
+			},
+			error: function(){
+				var myToast = document.querySelector('#alerta6');
+				var toast = new bootstrap.Toast(myToast);
+				toast.show();
 			}
 		});
 	}
 
-}
+}
