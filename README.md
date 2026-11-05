@@ -4,7 +4,7 @@ Aplicacion web del gestor de proyectos, construida con Java y Spring Boot.
 
 ## Requisitos
 
-- JDK 17 o compatible.
+- JDK 25 o compatible.
 - Maven 3.9.9, incluido mediante Maven Wrapper.
 
 ## Ejecutar
@@ -15,4 +15,4 @@ En Windows, desde esta carpeta:
 .\mvnw.cmd spring-boot:run
 ```
 
-La version de Java objetivo se configura como `17` en `pom.xml`.
+La version de Java objetivo se configura como `25` en `pom.xml`.
