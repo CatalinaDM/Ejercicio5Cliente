@@ -227,4 +227,92 @@ class GestorControllerIntegracionTest {
 				.andExpect(status().isBadGateway())
 				.andExpect(jsonPath("$.codigo").value("API-502"));
 	}
+
+	// ------------------------------------------------------------------ RESTO DE ENDPOINTS
+
+	@Test
+	@DisplayName("AUT-E05 Vistas estaticas: home, tutorial, manual, login y proyecto responden con su vista")
+	void lasVistasEstaticasResponden() throws Exception {
+		rutas.put("POST /buscarUsuarios", new Respuesta(200, "[{\"id_usuario\":1,\"nombre\":\"Ana\"}]"));
+
+		mockMvc.perform(get("/")).andExpect(status().isOk()).andExpect(view().name("home"));
+		mockMvc.perform(get("/tutorial")).andExpect(status().isOk()).andExpect(view().name("tutorial"));
+		mockMvc.perform(get("/manual")).andExpect(status().isOk()).andExpect(view().name("manual"));
+		mockMvc.perform(get("/login")).andExpect(status().isOk()).andExpect(view().name("login"));
+		mockMvc.perform(get("/proyecto")).andExpect(status().isOk()).andExpect(view().name("proyecto"))
+				.andExpect(model().attributeExists("tarea", "comentarios", "listaUsuarios"));
+		mockMvc.perform(get("/tarea")).andExpect(status().isOk()).andExpect(view().name("proyecto"))
+				.andExpect(model().attributeExists("tareas"));
+	}
+
+	@Test
+	@DisplayName("AUT-E06 Proyectos: guardar redirige a /inicio y eliminar reenvia el DELETE al backend")
+	void guardarYEliminarProyecto() throws Exception {
+		rutas.put("POST /addProyecto", new Respuesta(200, "1"));
+		rutas.put("DELETE /deleteProyecto", new Respuesta(200, "1"));
+
+		mockMvc.perform(post("/saveProyecto").param("nombre", "Proyecto A").param("estado_proyecto", "Activo"))
+				.andExpect(status().is3xxRedirection()).andExpect(header().string("Location", "/inicio"));
+		assertThat(recibido.get("POST /addProyecto")).contains("\"nombre\":\"Proyecto A\"");
+
+		mockMvc.perform(post("/eliminarProyecto").contentType(MediaType.APPLICATION_JSON).content("{\"id_proyecto\":5}"))
+				.andExpect(status().is3xxRedirection()).andExpect(header().string("Location", "/inicio"));
+		assertThat(recibido.get("DELETE /deleteProyecto")).contains("\"id_proyecto\":5");
+	}
+
+	@Test
+	@DisplayName("AUT-E07 Consultas: usuarios, tareas y comentarios se devuelven tal como los entrega el backend")
+	void consultasDeListas() throws Exception {
+		rutas.put("POST /buscarUsuarios", new Respuesta(200, "[{\"id_usuario\":1,\"nombre\":\"Ana\"}]"));
+		rutas.put("POST /buscarTareas", new Respuesta(200, "[{\"id_tarea\":2,\"nombre\":\"Tarea 2\"}]"));
+		rutas.put("POST /buscarComentarios", new Respuesta(200, "[{\"id_comentario\":3,\"texto_comentario\":\"Hola\"}]"));
+
+		mockMvc.perform(post("/consultarUsuarios")).andExpect(status().isOk())
+				.andExpect(jsonPath("$[0].nombre").value("Ana"));
+		mockMvc.perform(post("/consultarTareas")).andExpect(status().isOk())
+				.andExpect(jsonPath("$[0].id_tarea").value(2));
+		mockMvc.perform(post("/consultarComentarios")).andExpect(status().isOk())
+				.andExpect(jsonPath("$[0].texto_comentario").value("Hola"));
+	}
+
+	@Test
+	@DisplayName("AUT-E08 Tareas y comentarios por proyecto/tarea: se consultan en el backend con el cuerpo recibido")
+	void obtenerTareasYComentarios() throws Exception {
+		rutas.put("POST /getTarea", new Respuesta(200, "[{\"id_tarea\":2,\"id_proyecto\":9}]"));
+		rutas.put("POST /getComentario", new Respuesta(200, "[{\"id_comentario\":3,\"id_tarea\":2}]"));
+
+		mockMvc.perform(post("/obtenerTareas").contentType(MediaType.APPLICATION_JSON).content("{\"id_proyecto\":9}"))
+				.andExpect(status().isOk()).andExpect(jsonPath("$[0].id_tarea").value(2));
+		mockMvc.perform(post("/obtenerComentarios").contentType(MediaType.APPLICATION_JSON).content("{\"id_tarea\":2}"))
+				.andExpect(status().isOk()).andExpect(jsonPath("$[0].id_comentario").value(3));
+	}
+
+	@Test
+	@DisplayName("AUT-E09 Tareas: guardar redirige a /proyecto, y verificar/cambiar/eliminar/actualizar usan el backend")
+	void operacionesDeTareas() throws Exception {
+		rutas.put("POST /addTareas", new Respuesta(200, "1"));
+		rutas.put("DELETE /deleteTareas", new Respuesta(200, "1"));
+		rutas.put("GET /buscarTarea?id_tarea=4", new Respuesta(200, "{\"id_tarea\":4,\"nombre\":\"Tarea 4\"}"));
+
+		mockMvc.perform(post("/saveTarea").param("nombre", "Tarea 4").param("id_proyecto", "9"))
+				.andExpect(status().is3xxRedirection());
+		mockMvc.perform(post("/verificarTarea").contentType(MediaType.APPLICATION_JSON).content("{\"id_tarea\":4}"))
+				.andExpect(status().isOk()).andExpect(content().string("1"));
+		mockMvc.perform(post("/cambiosTareas").contentType(MediaType.APPLICATION_JSON).content("{\"estado\":\"Hecha\"}"))
+				.andExpect(status().isOk()).andExpect(content().string("1"));
+		mockMvc.perform(post("/actualizarTarea").contentType(MediaType.APPLICATION_JSON).content("{\"id_tarea\":4}"))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.nombre").value("Tarea 4"));
+		mockMvc.perform(post("/eliminarTarea").contentType(MediaType.APPLICATION_JSON).content("{\"id_tarea\":4}"))
+				.andExpect(status().is3xxRedirection()).andExpect(header().string("Location", "/proyecto"));
+	}
+
+	@Test
+	@DisplayName("AUT-E10 Comentarios: guardar un comentario devuelve el resultado del backend")
+	void guardarComentario() throws Exception {
+		rutas.put("POST /addComentario", new Respuesta(200, "1"));
+
+		mockMvc.perform(post("/saveComentario").contentType(MediaType.APPLICATION_JSON)
+						.content("{\"id_tarea\":2,\"texto_comentario\":\"Hola\"}"))
+				.andExpect(status().isOk()).andExpect(content().string("1"));
+	}
 }
