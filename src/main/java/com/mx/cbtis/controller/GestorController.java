@@ -254,14 +254,10 @@ public class GestorController {
 	
 	@GetMapping("/tarea")
 	public String getTarea(Model modelo) {
+		modelo.addAttribute("tareas", new Tareas());
 
-		RestTemplate template = new RestTemplate();
-		HttpHeaders headers = new HttpHeaders();
-		headers.setContentType(MediaType.APPLICATION_JSON);
-		Tareas tareas = new Tareas();
-		modelo.addAttribute("tareas", tareas);
-		
-		return "proyecto";
+		// La vista "proyecto" necesita tambien los atributos "tarea", "comentarios" y "listaUsuarios"
+		return getProyecto(modelo);
 	}
 	
 	@PostMapping("/saveTarea")
