@@ -15,7 +15,9 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -39,7 +41,29 @@ public class GestorController {
 	private String apiUrl(String endpoint) {
 		return "http://localhost:" + apiPort + endpoint;
 	}
-	
+
+	/*
+	 * Mitigacion CVE-2026-59282 (DoS por rutas de propiedades en data binding)
+	 * y de asignacion masiva: cada formulario solo puede enlazar los campos
+	 * simples que realmente envia. Cualquier otro parametro se ignora.
+	 */
+	@InitBinder("usuario")
+	void camposPermitidosUsuario(WebDataBinder binder) {
+		binder.setAllowedFields("nombre", "correo_electronico", "contrasena", "rol", "imagen_usuario");
+	}
+
+	@InitBinder("proyectos")
+	void camposPermitidosProyecto(WebDataBinder binder) {
+		binder.setAllowedFields("id_proyecto", "nombre", "descripcion", "fecha_inicio",
+				"fecha_finalizacion", "estado_proyecto", "fondo");
+	}
+
+	@InitBinder("tareas")
+	void camposPermitidosTarea(WebDataBinder binder) {
+		binder.setAllowedFields("id_tarea", "nombre", "descripcion", "fecha_vencimiento",
+				"lista", "estado", "id_proyecto");
+	}
+
 	@GetMapping("/")
 	public String getHome() {
 		return "home";

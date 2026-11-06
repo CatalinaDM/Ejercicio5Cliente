@@ -119,6 +119,23 @@ class GestorControllerIntegracionTest {
 	}
 
 	@Test
+	@DisplayName("AUT-S01 Seguridad: el registro ignora campos no permitidos (mitigacion CVE-2026-59282)")
+	void registrarUsuarioIgnoraCamposNoPermitidos() throws Exception {
+		rutas.put("POST /addUsuario", new Respuesta(200, "1"));
+
+		mockMvc.perform(post("/saveUsuario")
+						.param("nombre", "Usuario Prueba")
+						.param("id_usuario", "99")
+						.param("nombre.class.module", "x"))
+				.andExpect(status().is3xxRedirection())
+				.andExpect(header().string("Location", "/login"));
+
+		assertThat(recibido.get("POST /addUsuario"))
+				.contains("\"nombre\":\"Usuario Prueba\"")
+				.doesNotContain("\"id_usuario\":99");
+	}
+
+	@Test
 	@DisplayName("AUT-E03 Vista: /inicio entrega la vista con el modelo de proyectos y /register con el modelo de usuario")
 	void lasVistasSeRenderizanConSuModelo() throws Exception {
 		mockMvc.perform(get("/inicio"))
