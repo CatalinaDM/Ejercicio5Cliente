@@ -25,21 +25,30 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.sun.net.httpserver.HttpServer;
 
 /**
  * Pruebas automaticas del frontend (GestorController + vistas Thymeleaf).
- * El backend (API REST) se simula con un servidor HTTP local en el mismo puerto
- * que usa el controlador, de modo que se prueba el consumo real de los endpoints.
+ * El backend (API REST) se simula con un servidor HTTP local en un puerto libre
+ * asignado por el sistema operativo; ese puerto se inyecta en la propiedad
+ * {@code api.port} para que el controlador consuma la API simulada sin depender
+ * del valor configurado en application.properties ni de puertos ocupados en CI.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
 class GestorControllerIntegracionTest {
 
-	/** Puerto en el que el controlador espera a la API (8081 por defecto). */
-	static final int PUERTO_API = Integer.getInteger("api.port", 8081);
+	/** Puerto 0: el sistema operativo asigna un puerto libre. */
+	static final int PUERTO_LIBRE = 0;
+
+	@DynamicPropertySource
+	static void configurarPuertoApi(DynamicPropertyRegistry registro) {
+		registro.add("api.port", () -> api.getAddress().getPort());
+	}
 
 	record Respuesta(int status, String cuerpo) {}
 
@@ -52,7 +61,7 @@ class GestorControllerIntegracionTest {
 
 	@BeforeAll
 	static void levantarApiSimulada() throws IOException {
-		api = HttpServer.create(new InetSocketAddress(PUERTO_API), 0);
+		api = HttpServer.create(new InetSocketAddress(PUERTO_LIBRE), 0);
 		api.createContext("/", ex -> {
 			String clave = ex.getRequestMethod() + " " + ex.getRequestURI();
 			recibido.put(clave, new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
