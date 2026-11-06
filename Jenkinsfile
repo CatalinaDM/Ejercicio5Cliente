@@ -30,6 +30,8 @@ pipeline {
                     mkdir -p semgrep-input semgrep-reports
 
                     find src/main/java src/test/java -type f -name '*.java' -exec cp --parents {} semgrep-input/ \\;
+                    find src/main/resources/templates -type f -name '*.html' -exec cp --parents {} semgrep-input/ \\;
+                    find src/main/resources/static/js -type f -name '*.js' ! -name 'bootstrap*' ! -name 'jquery*' ! -name 'popper*' -exec cp --parents {} semgrep-input/ \\;
 
                     docker run --rm \
                         -v jenkins_home:/var/jenkins_home \
