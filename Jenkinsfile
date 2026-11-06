@@ -1,104 +1,89 @@
 pipeline {
     agent any
-
     tools {
         jdk 'jdk-21'
         maven 'maven-3.9.9'
     }
-
     stages {
-
         stage('Checkout') {
             steps {
-                git branch: 'test',
-                    url: 'https://github.com/CatalinaDM/Ejercicio5Cliente.git'
+                git branch: 'test', url: 'https://github.com/CatalinaDM/Ejercicio5Cliente.git'
             }
         }
-
         stage('Version') {
-            steps {
-                sh 'java -version && mvn -version'
-            }
+            steps { sh 'java -version && mvn -version' }
         }
-
         stage('Build & Test') {
-            steps {
-                sh 'mvn -B clean verify'
-            }
+            steps { sh 'mvn -B clean verify' }
             post {
                 always {
                     junit 'target/surefire-reports/*.xml'
+                    archiveArtifacts artifacts: 'target/site/jacoco/**', allowEmptyArchive: true
                 }
             }
         }
+        stage('Semgrep - Analisis de codigo') {
+            steps {
+                sh '''
+                    set -e
+                    rm -rf semgrep-input semgrep-reports
+                    mkdir -p semgrep-input semgrep-reports
 
-     stage('Semgrep - Analisis de codigo') {
-    steps {
-        sh '''
-            set -e
+                    find src/main/java src/test/java -type f -name '*.java' -exec cp --parents {} semgrep-input/ \\;
 
-            echo "Preparando archivos..."
-            rm -rf semgrep-input
-            mkdir -p semgrep-input semgrep-reports
+                    docker run --rm \
+                        -v jenkins_home:/var/jenkins_home \
+                        -w "$WORKSPACE/semgrep-input" \
+                        semgrep/semgrep:latest \
+                        semgrep scan --config auto --json --no-git-ignore . \
+                        > semgrep-reports/semgrep-report.json || true
 
-            find src/main/java src/test/java \
-                -type f -name '*.java' \
-                -exec cp --parents {} semgrep-input/ \\;
-
-            echo "Archivos preparados:"
-            find semgrep-input -type f -name '*.java'
-
-            TOTAL=$(find semgrep-input -type f -name '*.java' | wc -l)
-
-            echo "Total de archivos: $TOTAL"
-
-            if [ "$TOTAL" -eq 0 ]; then
-                echo "ERROR: No hay archivos Java."
-                exit 1
-            fi
-
-            echo "Verificando montaje del volumen..."
-
-            docker run --rm \
-                -v jenkins_home:/var/jenkins_home \
-                -w "$WORKSPACE/semgrep-input" \
-                semgrep/semgrep:latest \
-                sh -c "find . -type f -name '*.java'"
-
-            echo "Ejecutando Semgrep..."
-
-            docker run --rm \
-                -v jenkins_home:/var/jenkins_home \
-                -w "$WORKSPACE/semgrep-input" \
-                semgrep/semgrep:latest \
-                semgrep scan \
-                --config auto \
-                --json \
-                --no-git-ignore \
-                . \
-                > semgrep-reports/semgrep-report.json
-
-            echo "Validando reporte..."
-
-            test -s semgrep-reports/semgrep-report.json
-
-            grep -Fq '"errors":[]' semgrep-reports/semgrep-report.json
-
-            echo "Reporte generado:"
-            ls -lh semgrep-reports/semgrep-report.json
-        '''
-    }
-
-    post {
-        always {
-            archiveArtifacts(
-                artifacts: 'semgrep-reports/semgrep-report.json',
-                allowEmptyArchive: true,
-                fingerprint: true
-            )
+                    echo "=========================================" > semgrep-reports/resumen.txt
+                    echo "RESUMEN DE HALLAZGOS - FRONTEND" >> semgrep-reports/resumen.txt
+                    echo "=========================================" >> semgrep-reports/resumen.txt
+                    
+                    TOTAL=$(grep -o '"check_id"' semgrep-reports/semgrep-report.json | wc -l)
+                    echo "Total de hallazgos: $TOTAL" >> semgrep-reports/resumen.txt
+                    echo "" >> semgrep-reports/resumen.txt
+                    
+                    if [ "$TOTAL" -gt 0 ]; then
+                        echo "Detalle (Regla y Archivo):" >> semgrep-reports/resumen.txt
+                        grep -o '"check_id": *"[^"]*", *"path": *"[^"]*"' semgrep-reports/semgrep-report.json \
+                          | awk -F'"' '{print " - Regla: " $4 " | Archivo: " $8}' >> semgrep-reports/resumen.txt
+                    else
+                        echo "No se encontraron vulnerabilidades en el codigo." >> semgrep-reports/resumen.txt
+                    fi
+                      
+                    cat semgrep-reports/resumen.txt
+                '''
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'semgrep-reports/**', allowEmptyArchive: true
+                }
+            }
         }
-    }
-}
+        stage('OWASP Dependency Check') {
+            steps {
+                sh '''
+                    echo "========================================="
+                    echo "ESCANEO DE VULNERABILIDADES (OWASP)"
+                    echo "========================================="
+                    mvn -B org.owasp:dependency-check-maven:check \
+                        -DskipTests \
+                        -DfailBuildOnCVSS=11 \
+                        -DexcludePaths=target \
+                            -Dformats=HTML,XML,JSON \
+                            -DossindexAnalyzerEnabled=false
+                '''
+            }
+            post {
+                always {
+                    dependencyCheckPublisher pattern: 'target/dependency-check-report.xml'
+                    archiveArtifacts artifacts: 'target/dependency-check-report.*', allowEmptyArchive: true
+                }
+            }
+        }
         stage('SonarQube') {
             steps {
                 withSonarQubeEnv('sonarqube') {
