@@ -7,7 +7,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'test', url: 'https://github.com/CatalinaDM/Ejercicio5Cliente.git'
+                checkout scm
             }
         }
         stage('Version') {
@@ -17,7 +17,7 @@ pipeline {
             steps { sh 'mvn -B clean verify' }
             post {
                 always {
-                    junit 'target/surefire-reports/*.xml'
+                    junit allowEmptyResults: true, testResults: 'target/surefire-reports/*.xml'
                     archiveArtifacts artifacts: 'target/site/jacoco/**', allowEmptyArchive: true
                 }
             }
@@ -67,17 +67,20 @@ pipeline {
         }
         stage('OWASP Dependency Check') {
             steps {
-                sh '''
-                    echo "========================================="
-                    echo "ESCANEO DE VULNERABILIDADES (OWASP)"
-                    echo "========================================="
-                    mvn -B org.owasp:dependency-check-maven:check \
-                        -DskipTests \
-                        -DfailBuildOnCVSS=11 \
-                        -DexcludePaths=target \
+                withCredentials([string(credentialsId: 'nvd-api-key', variable: 'NVD_KEY')]) {
+                    sh '''
+                        echo "========================================="
+                        echo "ESCANEO DE VULNERABILIDADES (OWASP)"
+                        echo "========================================="
+                        mvn -B org.owasp:dependency-check-maven:12.1.1:check \
+                            -DskipTests \
+                            -DfailBuildOnCVSS=11 \
+                            -DexcludePaths=target \
                             -Dformats=HTML,XML,JSON \
-                            -DossindexAnalyzerEnabled=false
-                '''
+                            -DossindexAnalyzerEnabled=false \
+                            -DnvdApiKey="$NVD_KEY"
+                    '''
+                }
             }
             post {
                 always {

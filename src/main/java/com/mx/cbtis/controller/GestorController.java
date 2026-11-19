@@ -35,10 +35,16 @@ import com.mx.cbtis.modelo.Usuario;
 @Controller
 public class GestorController {
 
+	@Value("${api.url:}")
+	private String apiUrlBase;
+
 	@Value("${api.port:8081}")
 	private int apiPort;
 
 	private String apiUrl(String endpoint) {
+		if (apiUrlBase != null && !apiUrlBase.isBlank()) {
+			return apiUrlBase.replaceAll("/+$", "") + endpoint;
+		}
 		return "http://localhost:" + apiPort + endpoint;
 	}
 
