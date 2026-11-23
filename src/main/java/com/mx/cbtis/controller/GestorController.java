@@ -42,8 +42,12 @@ public class GestorController {
 	private int apiPort;
 
 	private String apiUrl(String endpoint) {
-		if (apiUrlBase != null && !apiUrlBase.isBlank()) {
-			String base = apiUrlBase.trim();
+		String base = apiUrlBase;
+		if (base == null || base.isBlank()) {
+			base = System.getenv("API_URL");
+		}
+		if (base != null && !base.isBlank()) {
+			base = base.trim();
 			while (base.endsWith("/")) {
 				base = base.substring(0, base.length() - 1);
 			}
