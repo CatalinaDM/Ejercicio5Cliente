@@ -1,5 +1,7 @@
 package com.mx.cbtis.controller;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -84,21 +86,22 @@ public class GestorController {
 		Map<String, Object> info = new HashMap<>();
 		info.put("apiUrlBase", apiUrlBase);
 		info.put("env_API_URL", System.getenv("API_URL"));
-		String testUrl = apiUrl("/buscarUsuarios");
+		String testUrl = apiUrl("/getUsuarioLogin");
 		info.put("resolvedUrl", testUrl);
 		try {
 			RestTemplate template = new RestTemplate();
-			org.springframework.http.client.SimpleClientHttpRequestFactory factory =
-					new org.springframework.http.client.SimpleClientHttpRequestFactory();
-			factory.setConnectTimeout(4000);
-			factory.setReadTimeout(4000);
-			template.setRequestFactory(factory);
-			ResponseEntity<String> resp = template.postForEntity(testUrl, null, String.class);
-			info.put("backend_status", resp.getStatusCode().value());
-			info.put("backend_body", resp.getBody());
+			Usuario u = new Usuario();
+			u.setCorreo_electronico("catimanzano1@gmail.com");
+			u.setContrasena("Cati227475..");
+			ResponseEntity<Usuario> resp = template.postForEntity(testUrl, u, Usuario.class);
+			info.put("login_status", resp.getStatusCode().value());
+			info.put("login_user", resp.getBody().getNombre());
 		} catch (Exception e) {
-			info.put("error_type", e.getClass().getName());
-			info.put("error_message", e.getMessage());
+			info.put("login_error_type", e.getClass().getName());
+			info.put("login_error_message", e.getMessage());
+			StringWriter sw = new StringWriter();
+			e.printStackTrace(new PrintWriter(sw));
+			info.put("stacktrace", sw.toString());
 		}
 		return info;
 	}
@@ -207,11 +210,17 @@ public class GestorController {
 	@PostMapping("/verificarLogin")
 	public ResponseEntity<Usuario> verificarUsuario(@RequestBody Usuario paramUser) {
 		String urlservicebd = apiUrl("/getUsuarioLogin");
-		RestTemplate  template = new RestTemplate();
-		ResponseEntity<Usuario> response = template.postForEntity(urlservicebd,paramUser,Usuario.class);
-		
-		return response;
-
+		System.out.println("verificarUsuario llamando a: " + urlservicebd + " con correo: " + (paramUser != null ? paramUser.getCorreo_electronico() : "null"));
+		try {
+			RestTemplate template = new RestTemplate();
+			ResponseEntity<Usuario> response = template.postForEntity(urlservicebd, paramUser, Usuario.class);
+			System.out.println("verificarUsuario exito: " + response.getStatusCode());
+			return response;
+		} catch (org.springframework.web.client.RestClientException e) {
+			System.err.println("verificarUsuario fallo: " + e.getClass().getName() + " - " + e.getMessage());
+			e.printStackTrace();
+			throw e;
+		}
 	}
 	
 	/*@PostMapping("/obtenerTareas")
