@@ -223,7 +223,7 @@ public class GestorController {
 			RestTemplate template = new RestTemplate();
 			ResponseEntity<Usuario> response = template.postForEntity(urlservicebd, paramUser, Usuario.class);
 			debugMsg = "Paso 2: Exito 200, nombre=" + (response.getBody() != null ? response.getBody().getNombre() : "null");
-			return response;
+			return ResponseEntity.ok(response.getBody());
 		} catch (Throwable t) {
 			StringWriter sw = new StringWriter();
 			t.printStackTrace(new PrintWriter(sw));
@@ -377,7 +377,7 @@ public class GestorController {
 		String urlservicebd = apiUrl("/addTareas");
 		RestTemplate template = new RestTemplate();
 		ResponseEntity<Integer> response = template.postForEntity(urlservicebd, paramName, Integer.class);
-		return response;
+		return ResponseEntity.ok(response.getBody());
 	}
 	
 	@PostMapping("/cambiosTareas")
@@ -385,7 +385,7 @@ public class GestorController {
 		String urlservicebd = apiUrl("/addTareas");
 		RestTemplate template = new RestTemplate();
 		ResponseEntity<Integer> response = template.postForEntity(urlservicebd, paramDatos, Integer.class);
-		return response;
+		return ResponseEntity.ok(response.getBody());
 	}
 	
 	@PostMapping("/consultarTareas")
