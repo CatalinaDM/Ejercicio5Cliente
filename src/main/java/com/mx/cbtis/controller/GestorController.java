@@ -207,19 +207,32 @@ public class GestorController {
 	}
 	
 	
+	private static volatile String debugMsg = "No request yet";
+
+	@GetMapping("/debug-error")
+	@ResponseBody
+	public String getDebugError() {
+		return debugMsg;
+	}
+
 	@PostMapping("/verificarLogin")
 	public ResponseEntity<Usuario> verificarUsuario(@RequestBody Usuario paramUser) {
 		String urlservicebd = apiUrl("/getUsuarioLogin");
-		System.out.println("verificarUsuario llamando a: " + urlservicebd + " con correo: " + (paramUser != null ? paramUser.getCorreo_electronico() : "null"));
 		try {
+			debugMsg = "Paso 1: url=" + urlservicebd + ", correo=" + (paramUser != null ? paramUser.getCorreo_electronico() : "null");
 			RestTemplate template = new RestTemplate();
 			ResponseEntity<Usuario> response = template.postForEntity(urlservicebd, paramUser, Usuario.class);
-			System.out.println("verificarUsuario exito: " + response.getStatusCode());
+			debugMsg = "Paso 2: Exito 200, nombre=" + (response.getBody() != null ? response.getBody().getNombre() : "null");
 			return response;
-		} catch (org.springframework.web.client.RestClientException e) {
-			System.err.println("verificarUsuario fallo: " + e.getClass().getName() + " - " + e.getMessage());
-			e.printStackTrace();
-			throw e;
+		} catch (Throwable t) {
+			StringWriter sw = new StringWriter();
+			t.printStackTrace(new PrintWriter(sw));
+			debugMsg = "ERROR: " + t.getClass().getName() + " - " + t.getMessage() + "\n" + sw;
+			System.err.println(debugMsg);
+			if (t instanceof RuntimeException re) {
+				throw re;
+			}
+			throw new RuntimeException(t);
 		}
 	}
 	
