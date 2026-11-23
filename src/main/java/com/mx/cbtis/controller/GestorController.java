@@ -43,7 +43,11 @@ public class GestorController {
 
 	private String apiUrl(String endpoint) {
 		if (apiUrlBase != null && !apiUrlBase.isBlank()) {
-			return apiUrlBase.replaceAll("/+$", "") + endpoint;
+			String base = apiUrlBase.trim();
+			while (base.endsWith("/")) {
+				base = base.substring(0, base.length() - 1);
+			}
+			return base + endpoint;
 		}
 		return "http://localhost:" + apiPort + endpoint;
 	}
