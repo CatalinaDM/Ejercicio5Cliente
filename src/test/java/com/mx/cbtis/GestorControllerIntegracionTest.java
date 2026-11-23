@@ -59,6 +59,9 @@ class GestorControllerIntegracionTest {
 	@Autowired
 	MockMvc mockMvc;
 
+	@Autowired
+	com.mx.cbtis.controller.GestorController gestorController;
+
 	@BeforeAll
 	static void levantarApiSimulada() throws IOException {
 		api = HttpServer.create(new InetSocketAddress(PUERTO_LIBRE), 0);
@@ -314,5 +317,21 @@ class GestorControllerIntegracionTest {
 		mockMvc.perform(post("/saveComentario").contentType(MediaType.APPLICATION_JSON)
 						.content("{\"id_tarea\":2,\"texto_comentario\":\"Hola\"}"))
 				.andExpect(status().isOk()).andExpect(content().string("1"));
+	}
+
+	@Test
+	@DisplayName("AUT-E11 ApiUrl: valida resolucion con apiUrlBase definida y con espacios")
+	void resolucionApiUrl() {
+		org.springframework.test.util.ReflectionTestUtils.setField(gestorController, "apiUrlBase", "https://mi-backend.up.railway.app/");
+		String urlRemota = org.springframework.test.util.ReflectionTestUtils.invokeMethod(gestorController, "apiUrl", "/buscarProyectos");
+		assertThat(urlRemota).isEqualTo("https://mi-backend.up.railway.app/buscarProyectos");
+
+		org.springframework.test.util.ReflectionTestUtils.setField(gestorController, "apiUrlBase", "   ");
+		String urlVacia = org.springframework.test.util.ReflectionTestUtils.invokeMethod(gestorController, "apiUrl", "/buscarProyectos");
+		assertThat(urlVacia).startsWith("http://localhost:");
+
+		org.springframework.test.util.ReflectionTestUtils.setField(gestorController, "apiUrlBase", null);
+		String urlNull = org.springframework.test.util.ReflectionTestUtils.invokeMethod(gestorController, "apiUrl", "/buscarProyectos");
+		assertThat(urlNull).startsWith("http://localhost:");
 	}
 }
