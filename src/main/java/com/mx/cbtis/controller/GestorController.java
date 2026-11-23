@@ -78,6 +78,31 @@ public class GestorController {
 				"lista", "estado", "id_proyecto");
 	}
 
+	@GetMapping("/ping-api")
+	@ResponseBody
+	public Map<String, Object> pingApi() {
+		Map<String, Object> info = new HashMap<>();
+		info.put("apiUrlBase", apiUrlBase);
+		info.put("env_API_URL", System.getenv("API_URL"));
+		String testUrl = apiUrl("/buscarUsuarios");
+		info.put("resolvedUrl", testUrl);
+		try {
+			RestTemplate template = new RestTemplate();
+			org.springframework.http.client.SimpleClientHttpRequestFactory factory =
+					new org.springframework.http.client.SimpleClientHttpRequestFactory();
+			factory.setConnectTimeout(4000);
+			factory.setReadTimeout(4000);
+			template.setRequestFactory(factory);
+			ResponseEntity<String> resp = template.postForEntity(testUrl, null, String.class);
+			info.put("backend_status", resp.getStatusCode().value());
+			info.put("backend_body", resp.getBody());
+		} catch (Exception e) {
+			info.put("error_type", e.getClass().getName());
+			info.put("error_message", e.getMessage());
+		}
+		return info;
+	}
+
 	@GetMapping("/")
 	public String getHome() {
 		return "home";
